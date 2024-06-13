@@ -6,8 +6,12 @@ const cors = require('cors')
 
 const app = express()
 const server = http.createServer(app)
-const io = socketIo(server)
-
+const io = socketIo(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+  },
+})
 let clients = []
 
 // Servir archivos estáticos del frontend
