@@ -20,21 +20,20 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'))
 })
 
+let peerConnection = null
 let senderStream = null
 
 io.on('connection', (socket) => {
   console.log('Nueva conexión: ', socket.id)
 
   socket.on('offer', async (offer) => {
-    const peerConnection = new wrtc.RTCPeerConnection()
+    peerConnection = new wrtc.RTCPeerConnection()
     peerConnection.onicecandidate = ({ candidate }) => {
       socket.emit('ice-candidate', candidate)
     }
 
-    if (senderStream) {
-      senderStream.getTracks().forEach((track) => {
-        peerConnection.addTrack(track, senderStream)
-      })
+    peerConnection.ontrack = (event) => {
+      senderStream = event.streams[0]
     }
 
     await peerConnection.setRemoteDescription(
@@ -47,25 +46,31 @@ io.on('connection', (socket) => {
   })
 
   socket.on('ice-candidate', async (candidate) => {
-    try {
-      await peerConnection.addIceCandidate(candidate)
-    } catch (error) {
-      console.error('Error adding received ice candidate', error)
+    if (candidate) {
+      try {
+        await peerConnection.addIceCandidate(candidate)
+      } catch (error) {
+        console.error('Error adding received ice candidate', error)
+      }
     }
   })
 
   socket.on('broadcaster', () => {
     console.log('Nueva transmisión de video')
-    senderStream = peerConnection
-      .getReceivers()
-      .map((receiver) => receiver.track)
+    if (senderStream) {
+      senderStream.getTracks().forEach((track) => {
+        peerConnection.addTrack(track, senderStream)
+      })
+    }
   })
 
   socket.on('disconnect', () => {
     console.log('Desconexión: ', socket.id)
-    if (senderStream) {
-      senderStream.getTracks().forEach((track) => track.stop())
+    if (peerConnection) {
+      peerConnection.close()
+      peerConnection = null
     }
+    senderStream = null
   })
 })
 
