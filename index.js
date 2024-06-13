@@ -2,6 +2,7 @@ const express = require('express')
 const http = require('http')
 const socketIo = require('socket.io')
 const path = require('path')
+const cors = require('cors')
 
 const app = express()
 const server = http.createServer(app)
@@ -17,6 +18,7 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'))
 })
 
+app.use(cors())
 io.on('connection', (socket) => {
   console.log('Nueva conexión: ', socket.id)
   clients.push(socket.id)
@@ -42,6 +44,6 @@ io.on('connection', (socket) => {
   })
 })
 
-server.listen(3000, () => {
+server.listen(1234, () => {
   console.log('Servidor corriendo en el puerto 3000')
 })
