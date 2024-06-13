@@ -12,6 +12,11 @@ let clients = []
 // Servir archivos estáticos del frontend
 app.use(express.static(path.join(__dirname, 'public')))
 
+// Manejo de todas las rutas no definidas para devolver el archivo HTML
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'))
+})
+
 io.on('connection', (socket) => {
   console.log('Nueva conexión: ', socket.id)
   clients.push(socket.id)
