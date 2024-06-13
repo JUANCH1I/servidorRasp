@@ -2,7 +2,7 @@ const express = require('express')
 const http = require('http')
 const socketIo = require('socket.io')
 const path = require('path')
-const cors = require('cors')
+const wrtc = require('wrtc')
 
 const app = express()
 const server = http.createServer(app)
@@ -12,42 +12,63 @@ const io = socketIo(server, {
     methods: ['GET', 'POST'],
   },
 })
-let clients = []
 
 // Servir archivos estáticos del frontend
 app.use(express.static(path.join(__dirname, 'public')))
 
-// Manejo de todas las rutas no definidas para devolver el archivo HTML
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'))
 })
 
-app.use(cors())
+let senderStream = null
+
 io.on('connection', (socket) => {
   console.log('Nueva conexión: ', socket.id)
-  clients.push(socket.id)
 
-  // Reenviar video a todos los clientes
-  socket.on('video', (data) => {
-    socket.broadcast.emit('video', data)
+  socket.on('offer', async (offer) => {
+    const peerConnection = new wrtc.RTCPeerConnection()
+    peerConnection.onicecandidate = ({ candidate }) => {
+      socket.emit('ice-candidate', candidate)
+    }
+
+    if (senderStream) {
+      senderStream.getTracks().forEach((track) => {
+        peerConnection.addTrack(track, senderStream)
+      })
+    }
+
+    await peerConnection.setRemoteDescription(
+      new wrtc.RTCSessionDescription(offer)
+    )
+    const answer = await peerConnection.createAnswer()
+    await peerConnection.setLocalDescription(answer)
+
+    socket.emit('answer', answer)
   })
 
-  // Reenviar audio a todos los clientes
-  socket.on('audio', (data) => {
-    socket.broadcast.emit('audio', data)
+  socket.on('ice-candidate', async (candidate) => {
+    try {
+      await peerConnection.addIceCandidate(candidate)
+    } catch (error) {
+      console.error('Error adding received ice candidate', error)
+    }
   })
 
-  // Controlar pines GPIO
-  socket.on('control', (command) => {
-    io.emit('control', command)
+  socket.on('broadcaster', () => {
+    console.log('Nueva transmisión de video')
+    senderStream = peerConnection
+      .getReceivers()
+      .map((receiver) => receiver.track)
   })
 
   socket.on('disconnect', () => {
     console.log('Desconexión: ', socket.id)
-    clients = clients.filter((id) => id !== socket.id)
+    if (senderStream) {
+      senderStream.getTracks().forEach((track) => track.stop())
+    }
   })
 })
 
-server.listen(1234, () => {
+server.listen(3000, () => {
   console.log('Servidor corriendo en el puerto 3000')
 })
