@@ -25,12 +25,13 @@ let broadcasters = {}
 io.on('connection', (socket) => {
   console.log('Nueva conexión: ', socket.id)
 
-  socket.on('offer', async ({ offer, id }) => {
+  socket.on('offer', async (offer) => {
     const peerConnection = new wrtc.RTCPeerConnection()
+    const id = socket.id
     broadcasters[id] = peerConnection
 
     peerConnection.onicecandidate = ({ candidate }) => {
-      socket.emit('ice-candidate', candidate)
+      socket.emit('ice-candidate', { candidate, id })
     }
 
     peerConnection.ontrack = (event) => {
@@ -50,7 +51,9 @@ io.on('connection', (socket) => {
   socket.on('ice-candidate', async ({ candidate, id }) => {
     if (candidate && broadcasters[id]) {
       try {
-        await broadcasters[id].addIceCandidate(candidate)
+        await broadcasters[id].addIceCandidate(
+          new wrtc.RTCIceCandidate(candidate)
+        )
       } catch (error) {
         console.error('Error adding received ice candidate', error)
       }
@@ -59,12 +62,11 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('Desconexión: ', socket.id)
-    Object.keys(broadcasters).forEach((id) => {
-      if (broadcasters[id].socket === socket) {
-        delete broadcasters[id]
-        io.emit('broadcaster-disconnected', id)
-      }
-    })
+    if (broadcasters[socket.id]) {
+      broadcasters[socket.id].close()
+      delete broadcasters[socket.id]
+      io.emit('broadcaster-disconnected', socket.id)
+    }
   })
 })
 
