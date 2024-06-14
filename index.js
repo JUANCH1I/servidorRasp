@@ -20,20 +20,22 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'))
 })
 
-let peerConnection = null
-let senderStream = null
+let broadcasters = {}
 
 io.on('connection', (socket) => {
   console.log('Nueva conexión: ', socket.id)
 
-  socket.on('offer', async (offer) => {
-    peerConnection = new wrtc.RTCPeerConnection()
+  socket.on('offer', async ({ offer, id }) => {
+    const peerConnection = new wrtc.RTCPeerConnection()
+    broadcasters[id] = peerConnection
+
     peerConnection.onicecandidate = ({ candidate }) => {
       socket.emit('ice-candidate', candidate)
     }
 
     peerConnection.ontrack = (event) => {
-      senderStream = event.streams[0]
+      broadcasters[id].stream = event.streams[0]
+      io.emit('new-broadcaster', id) // Notificar a los clientes de un nuevo broadcaster
     }
 
     await peerConnection.setRemoteDescription(
@@ -42,35 +44,27 @@ io.on('connection', (socket) => {
     const answer = await peerConnection.createAnswer()
     await peerConnection.setLocalDescription(answer)
 
-    socket.emit('answer', answer)
+    socket.emit('answer', { answer, id })
   })
 
-  socket.on('ice-candidate', async (candidate) => {
-    if (candidate) {
+  socket.on('ice-candidate', async ({ candidate, id }) => {
+    if (candidate && broadcasters[id]) {
       try {
-        await peerConnection.addIceCandidate(candidate)
+        await broadcasters[id].addIceCandidate(candidate)
       } catch (error) {
         console.error('Error adding received ice candidate', error)
       }
     }
   })
 
-  socket.on('broadcaster', () => {
-    console.log('Nueva transmisión de video')
-    if (senderStream) {
-      senderStream.getTracks().forEach((track) => {
-        peerConnection.addTrack(track, senderStream)
-      })
-    }
-  })
-
   socket.on('disconnect', () => {
     console.log('Desconexión: ', socket.id)
-    if (peerConnection) {
-      peerConnection.close()
-      peerConnection = null
-    }
-    senderStream = null
+    Object.keys(broadcasters).forEach((id) => {
+      if (broadcasters[id].socket === socket) {
+        delete broadcasters[id]
+        io.emit('broadcaster-disconnected', id)
+      }
+    })
   })
 })
 
