@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Pines GPIO</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .raspberry {
+            margin-bottom: 20px;
+        }
+        .raspberry h2 {
+            margin: 0 0 10px;
+        }
+        .pin-control {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Control de Pines GPIO</h1>
+    <div id="raspberries"></div>
+
+    <script>
+        async function fetchRaspberries() {
+            try {
+                const response = await fetch('https://servidorrasp.onrender.com/raspberries');
+                const raspberries = await response.json();
+                return raspberries;
+            } catch (error) {
+                console.error('Error al recuperar la lista de Raspberry Pis:', error);
+                return [];
+            }
+        }
+
+        function createPinControl(raspberryId, pin) {
+            const container = document.createElement('div');
+            container.className = 'pin-control';
+            
+            const label = document.createElement('label');
+            label.textContent = `Pin ${pin}: `;
+            
+            const onButton = document.createElement('button');
+            onButton.textContent = 'Encender';
+            onButton.onclick = () => controlPin(raspberryId, pin, 'on');
+            
+            const offButton = document.createElement('button');
+            offButton.textContent = 'Apagar';
+            offButton.onclick = () => controlPin(raspberryId, pin, 'off');
+            
+            container.appendChild(label);
+            container.appendChild(onButton);
+            container.appendChild(offButton);
+            
+            return container;
+        }
+
+        function controlPin(raspberryId, pin, state) {
+            fetch(`https://servidorrasp.onrender.com/gpio/${raspberryId}/${pin}/${state}`)
+                .then(response => response.text())
+                .then(data => alert(data))
+                .catch(error => alert('Error: ' + error));
+        }
+
+        async function initialize() {
+            const raspberries = await fetchRaspberries();
+            const raspberriesContainer = document.getElementById('raspberries');
+            
+            raspberries.forEach(raspberry => {
+                const raspberryDiv = document.createElement('div');
+                raspberryDiv.className = 'raspberry';
+                
+                const title = document.createElement('h2');
+                title.textContent = `Raspberry Pi ${raspberry.id}`;
+                
+                raspberryDiv.appendChild(title);
+                
+                // Añade controles para los pines GPIO que deseas controlar
+                [17, 18, 27].forEach(pin => {
+                    raspberryDiv.appendChild(createPinControl(raspberry.id, pin));
+                });
+                
+                raspberriesContainer.appendChild(raspberryDiv);
+            });
+        }
+
+        window.onload = initialize;
+    </script>
+</body>
+</html>

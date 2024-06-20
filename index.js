@@ -1,18 +1,27 @@
 const express = require('express')
 const axios = require('axios')
+const path = require('path')
 const app = express()
+const cors = require('cors')
 const port = 3000
 
-// Mapa de Raspberry Pis por ID y sus IPs actuales
 const raspberries = {}
 
 app.use(express.json())
+app.use(cors())
 
-// Ruta para que las Raspberry Pis registren sus IPs
 app.post('/register', (req, res) => {
   const { id, ip } = req.body
   raspberries[id] = ip
   res.send('Raspberry Pi registrada')
+})
+
+app.get('/raspberries', (req, res) => {
+  const raspberryList = Object.keys(raspberries).map((id) => ({
+    id,
+    ip: raspberries[id],
+  }))
+  res.json(raspberryList)
 })
 
 app.get('/gpio/:id/:pin/:state', async (req, res) => {
@@ -31,6 +40,11 @@ app.get('/gpio/:id/:pin/:state', async (req, res) => {
   } catch (error) {
     res.status(500).send('Error al comunicarse con la Raspberry Pi')
   }
+})
+
+// Servir el archivo HTML
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'))
 })
 
 app.listen(port, () => {
