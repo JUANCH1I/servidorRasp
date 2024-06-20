@@ -27,7 +27,7 @@
     <script>
         async function fetchRaspberries() {
             try {
-                const response = await fetch('https://servidor-rasp.vercel.app//raspberries');
+                const response = await fetch('https://servidor-rasp.vercel.app/raspberries');
                 const raspberries = await response.json();
                 return raspberries;
             } catch (error) {
@@ -59,7 +59,7 @@
         }
 
         function controlPin(raspberryId, pin, state) {
-            fetch(`https://servidor-rasp.vercel.app//gpio/${raspberryId}/${pin}/${state}`)
+            fetch(`https://servidor-rasp.vercel.app/gpio/${raspberryId}/${pin}/${state}`)
                 .then(response => response.text())
                 .then(data => alert(data))
                 .catch(error => alert('Error: ' + error));
