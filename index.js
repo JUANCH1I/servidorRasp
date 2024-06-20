@@ -1,75 +1,38 @@
 const express = require('express')
-const http = require('http')
-const socketIo = require('socket.io')
-const path = require('path')
-const wrtc = require('wrtc')
-
+const axios = require('axios')
 const app = express()
-const server = http.createServer(app)
-const io = socketIo(server, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST'],
-  },
+const port = 3000
+
+// Mapa de Raspberry Pis por ID y sus IPs actuales
+const raspberries = {}
+
+app.use(express.json())
+
+// Ruta para que las Raspberry Pis registren sus IPs
+app.post('/register', (req, res) => {
+  const { id, ip } = req.body
+  raspberries[id] = ip
+  res.send('Raspberry Pi registrada')
 })
 
-// Servir archivos estáticos del frontend
-app.use(express.static(path.join(__dirname, 'public')))
+app.get('/gpio/:id/:pin/:state', async (req, res) => {
+  const id = parseInt(req.params.id)
+  const pin = req.params.pin
+  const state = req.params.state
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'))
+  const ip = raspberries[id]
+  if (!ip) {
+    return res.status(404).send('Raspberry Pi no encontrada')
+  }
+
+  try {
+    const response = await axios.get(`http://${ip}:5000/gpio/${pin}/${state}`)
+    res.send(response.data)
+  } catch (error) {
+    res.status(500).send('Error al comunicarse con la Raspberry Pi')
+  }
 })
 
-let broadcasters = {}
-
-io.on('connection', (socket) => {
-  console.log('Nueva conexión: ', socket.id)
-
-  socket.on('offer', async (offer) => {
-    const peerConnection = new wrtc.RTCPeerConnection()
-    const id = socket.id
-    broadcasters[id] = peerConnection
-
-    peerConnection.onicecandidate = ({ candidate }) => {
-      socket.emit('ice-candidate', { candidate, id })
-    }
-
-    peerConnection.ontrack = (event) => {
-      broadcasters[id].stream = event.streams[0]
-      io.emit('new-broadcaster', id) // Notificar a los clientes de un nuevo broadcaster
-    }
-
-    await peerConnection.setRemoteDescription(
-      new wrtc.RTCSessionDescription(offer)
-    )
-    const answer = await peerConnection.createAnswer()
-    await peerConnection.setLocalDescription(answer)
-
-    socket.emit('answer', { answer, id })
-  })
-
-  socket.on('ice-candidate', async ({ candidate, id }) => {
-    if (candidate && broadcasters[id]) {
-      try {
-        await broadcasters[id].addIceCandidate(
-          new wrtc.RTCIceCandidate(candidate)
-        )
-      } catch (error) {
-        console.error('Error adding received ice candidate', error)
-      }
-    }
-  })
-
-  socket.on('disconnect', () => {
-    console.log('Desconexión: ', socket.id)
-    if (broadcasters[socket.id]) {
-      broadcasters[socket.id].close()
-      delete broadcasters[socket.id]
-      io.emit('broadcaster-disconnected', socket.id)
-    }
-  })
-})
-
-server.listen(3000, () => {
-  console.log('Servidor corriendo en el puerto 3000')
+app.listen(port, () => {
+  console.log(`Servidor central escuchando en http://localhost:${port}`)
 })
