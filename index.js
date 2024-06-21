@@ -1,21 +1,33 @@
 const express = require('express')
+const http = require('http')
+const WebSocket = require('ws')
 const app = express()
-const path = require('path')
-const port = 3000
+const port = process.env.PORT || 3000
 
 app.use(express.json())
 
-let gpioStates = {} // Para almacenar el estado de los GPIO de cada Raspberry Pi
+const server = http.createServer(app)
+const wss = new WebSocket.Server({ server })
+
+let clients = {}
+
+wss.on('connection', (ws, req) => {
+  const id = req.url.replace('/?', '')
+  clients[id] = ws
+  ws.on('message', (message) => {
+    console.log(`Received message from ${id}: ${message}`)
+  })
+  ws.on('close', () => {
+    delete clients[id]
+  })
+})
 
 app.post('/api/raspberry/:id/gpio', (req, res) => {
   const { id } = req.params
   const { device, state } = req.body
-
-  if (!gpioStates[id]) {
-    gpioStates[id] = {}
+  if (clients[id]) {
+    clients[id].send(JSON.stringify({ device, state }))
   }
-
-  gpioStates[id][device] = state
   res
     .status(200)
     .send(
@@ -23,11 +35,6 @@ app.post('/api/raspberry/:id/gpio', (req, res) => {
     )
 })
 
-// Servir el archivo HTML
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'))
-})
-
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Servidor de API corriendo en http://localhost:${port}`)
 })
