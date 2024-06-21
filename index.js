@@ -5,34 +5,22 @@ const port = 3000
 
 app.use(express.json())
 
-const totens = [
-  {
-    id: 1,
-    videoUrl: 'http://toten1/video',
-    controlUrl: 'http://toten1/control',
-  },
-  {
-    id: 2,
-    videoUrl: 'http://toten2/video',
-    controlUrl: 'http://toten2/control',
-  },
-  // Agregar más tótems según sea necesario
-]
+let gpioStates = {} // Para almacenar el estado de los GPIO de cada Raspberry Pi
 
-app.get('/api/totens', (req, res) => {
-  res.json(totens)
-})
-
-app.post('/api/totens/:id/control', (req, res) => {
+app.post('/api/raspberry/:id/gpio', (req, res) => {
   const { id } = req.params
-  const { device } = req.body
-  const toten = totens.find((t) => t.id == id)
-  if (toten) {
-    // Aquí se realizarían las acciones necesarias para controlar los dispositivos
-    res.status(200).send(`Dispositivo ${device} controlado en Tótem ${id}`)
-  } else {
-    res.status(404).send('Tótem no encontrado')
+  const { device, state } = req.body
+
+  if (!gpioStates[id]) {
+    gpioStates[id] = {}
   }
+
+  gpioStates[id][device] = state
+  res
+    .status(200)
+    .send(
+      `GPIO del dispositivo ${device} en Raspberry Pi ${id} configurado a ${state}`
+    )
 })
 
 // Servir el archivo HTML
