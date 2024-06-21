@@ -30,6 +30,7 @@
             try {
                 const response = await fetch('https://servidor-rasp.vercel.app/raspberries'); // Cambia a tu URL de Vercel
                 const raspberries = await response.json();
+                console.log('Raspberries registradas:', raspberries);
                 return raspberries;
             } catch (error) {
                 console.error('Error al recuperar la lista de Raspberry Pis:', error);
