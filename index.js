@@ -8,6 +8,7 @@ let raspberries = {}
 
 app.use(express.json())
 
+// Endpoint para registrar las Raspberry Pis
 app.post('/register', (req, res) => {
   const { id, ip } = req.body
   raspberries[id] = ip
@@ -15,6 +16,7 @@ app.post('/register', (req, res) => {
   res.send('Raspberry Pi registrada')
 })
 
+// Endpoint para obtener la lista de Raspberry Pis registradas
 app.get('/raspberries', (req, res) => {
   const raspberryList = Object.keys(raspberries).map((id) => ({
     id,
@@ -23,6 +25,7 @@ app.get('/raspberries', (req, res) => {
   res.json(raspberryList)
 })
 
+// Endpoint para controlar los pines GPIO de las Raspberry Pis
 app.get('/gpio/:id/:pin/:state', async (req, res) => {
   const id = parseInt(req.params.id)
   const pin = req.params.pin
@@ -30,15 +33,11 @@ app.get('/gpio/:id/:pin/:state', async (req, res) => {
 
   const ip = raspberries[id]
   if (!ip) {
-    console.log(`Raspberry Pi ${id} no encontrada`)
     return res.status(404).send('Raspberry Pi no encontrada')
   }
 
   try {
     const response = await axios.get(`http://${ip}:5000/gpio/${pin}/${state}`)
-    console.log(
-      `Comando enviado a Raspberry Pi ${id} en ${ip}: pin ${pin} ${state}`
-    )
     res.send(response.data)
   } catch (error) {
     console.error(
