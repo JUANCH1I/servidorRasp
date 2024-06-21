@@ -1,47 +1,43 @@
 const express = require('express')
 const axios = require('axios')
-const fs = require('node:fs')
 const path = require('path')
 const app = express()
 const port = process.env.PORT || 3000
 
-const raspberriesFilePath = 'raspberries.json'
+let raspberries = {}
 
 app.use(express.json())
 
-// Leer la lista de Raspberry Pis desde el archivo
-const loadRaspberries = () => {
-  if (fs.existsSync(raspberriesFilePath)) {
-    const data = fs.readFileSync(raspberriesFilePath)
-    return JSON.parse(data)
-  }
-  return {}
-}
-
-// Guardar la lista de Raspberry Pis en el archivo
-const saveRaspberries = (raspberries) => {
-  fs.writeFileSync(raspberriesFilePath, JSON.stringify(raspberries, null, 2))
-}
-
 // Endpoint para registrar las Raspberry Pis
 app.post('/register', (req, res) => {
-  const { id, ip } = req.body
-  const raspberries = loadRaspberries()
-  raspberries[id] = ip
-  saveRaspberries(raspberries)
-  console.log(`Raspberry Pi ${id} registrada con IP ${ip}`)
-  res.send('Raspberry Pi registrada')
+  try {
+    const { id, ip } = req.body
+    if (!id || !ip) {
+      return res.status(400).send('ID o IP faltantes en la solicitud')
+    }
+    raspberries[id] = ip
+    console.log(`Raspberry Pi ${id} registrada con IP ${ip}`)
+    console.log('Estado actual de raspberries:', raspberries)
+    res.send('Raspberry Pi registrada')
+  } catch (error) {
+    console.error('Error al registrar la Raspberry Pi:', error.message)
+    res.status(500).send('Error al registrar la Raspberry Pi')
+  }
 })
 
 // Endpoint para obtener la lista de Raspberry Pis registradas
 app.get('/raspberries', (req, res) => {
-  const raspberries = loadRaspberries()
-  const raspberryList = Object.keys(raspberries).map((id) => ({
-    id,
-    ip: raspberries[id],
-  }))
-  console.log('Enviando lista de raspberries:', raspberryList)
-  res.json(raspberryList)
+  try {
+    const raspberryList = Object.keys(raspberries).map((id) => ({
+      id,
+      ip: raspberries[id],
+    }))
+    console.log('Enviando lista de raspberries:', raspberryList)
+    res.json(raspberryList)
+  } catch (error) {
+    console.error('Error al obtener la lista de Raspberry Pis:', error.message)
+    res.status(500).send('Error al obtener la lista de Raspberry Pis')
+  }
 })
 
 // Endpoint para controlar los pines GPIO de las Raspberry Pis
@@ -50,7 +46,6 @@ app.get('/gpio/:id/:pin/:state', async (req, res) => {
   const pin = req.params.pin
   const state = req.params.state
 
-  const raspberries = loadRaspberries()
   const ip = raspberries[id]
   if (!ip) {
     console.log(`Raspberry Pi ${id} no encontrada`)
