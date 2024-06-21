@@ -34,6 +34,11 @@ app.post('/api/totens/:id/control', (req, res) => {
   }
 })
 
+// Servir el archivo HTML
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'))
+})
+
 app.listen(port, () => {
   console.log(`Servidor de API corriendo en http://localhost:${port}`)
 })
