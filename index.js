@@ -2,13 +2,11 @@ const express = require('express')
 const axios = require('axios')
 const path = require('path')
 const app = express()
-const cors = require('cors')
 const port = 3000
 
 const raspberries = {}
 
 app.use(express.json())
-app.use(cors())
 
 app.post('/register', (req, res) => {
   const { id, ip } = req.body
