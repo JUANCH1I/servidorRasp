@@ -10,8 +10,8 @@
       margin: 20px;
     }
     video {
-      width: 640px;
-      height: 480px;
+      width: 320px;
+      height: 240px;
       background: #000;
     }
   </style>
@@ -30,26 +30,31 @@
     <button onclick="controlGPIO('device2', 'off')">Apagar Device 2</button>
   </div>
 
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://unpkg.com/simple-peer/simplepeer.min.js"></script>
   <script>
-    const videoElement = document.getElementById('video');
-    const ws = new WebSocket('wss://aa40dcbc-d5d9-4a7a-81de-c68024f3f90b-00-27jro4ko262it.picard.replit.dev'); // Cambia <URL_DEL_SERVIDOR> a la URL de tu servidor WebSocket
+    const video = document.getElementById('video');
+    const socket = io();
 
-    ws.onmessage = (event) => {
-      const blob = new Blob([event.data], { type: 'video/mp4' });
-      videoElement.src = URL.createObjectURL(blob);
-    };
+    const peer = new SimplePeer({ initiator: false, trickle: false });
+
+    socket.emit('start-stream');
+
+    socket.on('signal', data => {
+      peer.signal(data);
+    });
+
+    peer.on('signal', data => {
+      socket.emit('signal', data);
+    });
+
+    peer.on('data', data => {
+      const blob = new Blob([data], { type: 'video/mp2t' });
+      video.src = URL.createObjectURL(blob);
+    });
 
     function controlGPIO(device, state) {
-      fetch(`/api/raspberry/1/gpio`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ device, state })
-      })
-      .then(response => response.text())
-      .then(data => console.log(data))
-      .catch(error => console.error('Error:', error));
+      socket.emit('control', { device, state });
     }
   </script>
 </body>
