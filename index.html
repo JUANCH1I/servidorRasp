@@ -1,101 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Pines GPIO</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        .raspberry {
-            margin-bottom: 20px;
-        }
-        .raspberry h2 {
-            margin: 0 0 10px;
-        }
-        .pin-control {
-            margin-bottom: 5px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control de GPIO y Video</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    video {
+      width: 640px;
+      height: 480px;
+      background: #000;
+    }
+  </style>
 </head>
 <body>
-    <h1>Control de Pines GPIO</h1>
-    <div id="raspberries"></div>
-    <div id="log"></div>
+  <h1>Control de GPIO y Video</h1>
+  <div>
+    <video id="video" autoplay></video>
+  </div>
+  <div class="control-panel">
+    <button onclick="controlGPIO('device1', 'on')">Encender Device 1</button>
+    <button onclick="controlGPIO('device1', 'off')">Apagar Device 1</button>
+  </div>
+  <div class="control-panel">
+    <button onclick="controlGPIO('device2', 'on')">Encender Device 2</button>
+    <button onclick="controlGPIO('device2', 'off')">Apagar Device 2</button>
+  </div>
 
-    <script>
-        async function fetchRaspberries() {
-            try {
-                const response = await fetch('https://servidor-rasp.vercel.app/raspberries'); // Cambia a tu URL de Vercel
-                const raspberries = await response.json();
-                console.log('Raspberries registradas:', raspberries);
-                return raspberries;
-            } catch (error) {
-                console.error('Error al recuperar la lista de Raspberry Pis:', error);
-                return [];
-            }
-        }
+  <script>
+    const videoElement = document.getElementById('video');
+    const ws = new WebSocket('wss://aa40dcbc-d5d9-4a7a-81de-c68024f3f90b-00-27jro4ko262it.picard.replit.dev'); // Cambia <URL_DEL_SERVIDOR> a la URL de tu servidor WebSocket
 
-        function createPinControl(raspberryId, pin) {
-            const container = document.createElement('div');
-            container.className = 'pin-control';
-            
-            const label = document.createElement('label');
-            label.textContent = `Pin ${pin}: `;
-            
-            const onButton = document.createElement('button');
-            onButton.textContent = 'Encender';
-            onButton.onclick = () => controlPin(raspberryId, pin, 'on');
-            
-            const offButton = document.createElement('button');
-            offButton.textContent = 'Apagar';
-            offButton.onclick = () => controlPin(raspberryId, pin, 'off');
-            
-            container.appendChild(label);
-            container.appendChild(onButton);
-            container.appendChild(offButton);
-            
-            return container;
-        }
+    ws.onmessage = (event) => {
+      const blob = new Blob([event.data], { type: 'video/mp4' });
+      videoElement.src = URL.createObjectURL(blob);
+    };
 
-        function controlPin(raspberryId, pin, state) {
-            fetch(`https://servidor-rasp.vercel.app/gpio/${raspberryId}/${pin}/${state}`) // Cambia a tu URL de Vercel
-                .then(response => response.text())
-                .then(data => {
-                    const log = document.getElementById('log');
-                    log.innerHTML += `<p>${data}</p>`;
-                })
-                .catch(error => {
-                    const log = document.getElementById('log');
-                    log.innerHTML += `<p>Error: ${error}</p>`;
-                });
-        }
-
-        async function initialize() {
-            const raspberries = await fetchRaspberries();
-            const raspberriesContainer = document.getElementById('raspberries');
-            
-            raspberries.forEach(raspberry => {
-                const raspberryDiv = document.createElement('div');
-                raspberryDiv.className = 'raspberry';
-                
-                const title = document.createElement('h2');
-                title.textContent = `Raspberry Pi ${raspberry.id}`;
-                
-                raspberryDiv.appendChild(title);
-                
-                // Añade controles para los pines GPIO que deseas controlar
-                [17, 18, 27].forEach(pin => {
-                    raspberryDiv.appendChild(createPinControl(raspberry.id, pin));
-                });
-                
-                raspberriesContainer.appendChild(raspberryDiv);
-            });
-        }
-
-        window.onload = initialize;
-    </script>
+    function controlGPIO(device, state) {
+      fetch(`/api/raspberry/1/gpio`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ device, state })
+      })
+      .then(response => response.text())
+      .then(data => console.log(data))
+      .catch(error => console.error('Error:', error));
+    }
+  </script>
 </body>
 </html>
