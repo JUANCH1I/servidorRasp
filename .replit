@@ -1,0 +1,9 @@
+run = "node index.js"
+
+[[ports]]
+localPort = 1935
+externalPort = 5173
+
+[[ports]]
+localPort = 3000
+externalPort = 80
