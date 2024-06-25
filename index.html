@@ -19,43 +19,27 @@
 <body>
   <h1>Control de GPIO y Video</h1>
   <div>
-    <video id="video" autoplay></video>
+    <video id="video" controls autoplay></video>
   </div>
   <div class="control-panel">
-    <button onclick="controlGPIO('device1', 'on')">Encender Device 1</button>
-    <button onclick="controlGPIO('device1', 'off')">Apagar Device 1</button>
-  </div>
-  <div class="control-panel">
-    <button onclick="controlGPIO('device2', 'on')">Encender Device 2</button>
-    <button onclick="controlGPIO('device2', 'off')">Apagar Device 2</button>
+    <button onclick="controlGPIO('open-door')">Abrir Puerta</button>
+    <button onclick="controlGPIO('activate-siren')">Activar Sirena</button>
+    <button onclick="controlGPIO('turn-on-light')">Encender Luz</button>
   </div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="https://unpkg.com/simple-peer/simplepeer.min.js"></script>
   <script>
-    const video = document.getElementById('video');
-    const socket = io();
+    const ws = new WebSocket('wss://aa40dcbc-d5d9-4a7a-81de-c68024f3f90b-00-27jro4ko262it.picard.replit.dev/control'); // Reemplaza <your-replit-url> con la URL de tu Replit
 
-    const peer = new SimplePeer({ initiator: false, trickle: false });
+    ws.onopen = () => {
+      console.log('Conectado al servidor de control WebSocket');
+    };
 
-    socket.emit('start-stream');
-
-    socket.on('signal', data => {
-      peer.signal(data);
-    });
-
-    peer.on('signal', data => {
-      socket.emit('signal', data);
-    });
-
-    peer.on('data', data => {
-      const blob = new Blob([data], { type: 'video/mp2t' });
-      video.src = URL.createObjectURL(blob);
-    });
-
-    function controlGPIO(device, state) {
-      socket.emit('control', { device, state });
+    function controlGPIO(command) {
+      const instruction = JSON.stringify({ type: 'control', command });
+      ws.send(instruction);
     }
+
+    document.getElementById('video').src = 'https://aa40dcbc-d5d9-4a7a-81de-c68024f3f90b-00-27jro4ko262it.picard.replit.dev/live/stream/index.m3u8'; // Reemplaza <your-replit-url> con la URL de tu Replit
   </script>
 </body>
 </html>
