@@ -1,11 +1,17 @@
 const express = require('express')
 const http = require('http')
 const WebSocket = require('ws')
+const { ExpressPeerServer } = require('peer')
+
 const { Server } = require('socket.io')
 const path = require('path')
 
 const app = express()
 const server = http.createServer(app)
+const peerServer = ExpressPeerServer(server, {
+  debug: true,
+  path: '/',
+})
 const io = new Server(server)
 const wss = new WebSocket.Server({ noServer: true })
 
@@ -59,6 +65,15 @@ server.on('upgrade', (request, socket, head) => {
   } else {
     socket.destroy()
   }
+})
+
+// Manejo de eventos de conexión y desconexión de PeerJS
+peerServer.on('connection', (client) => {
+  console.log('Client connected:', client.id)
+})
+
+peerServer.on('disconnect', (client) => {
+  console.log('Client disconnected:', client.id)
 })
 
 app.get('/', (req, res) => {
