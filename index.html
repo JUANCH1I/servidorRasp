@@ -1,58 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <title>Control de GPIO y Video</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
-    video {
-      width: 320px;
-      height: 240px;
-      background: #000;
-    }
-  </style>
-</head>
-<body>
-  <h1>Control de GPIO y Video</h1>
-  <div>
-    <video id="video" controls autoplay></video>
-  </div>
-  <div class="control-panel">
-    <button onclick="controlGPIO('open-door')">Abrir Puerta</button>
-    <button onclick="controlGPIO('activate-siren')">Activar Sirena</button>
-    <button onclick="controlGPIO('turn-on-light')">Encender Luz</button>
-  </div>
-
-  <script>
-        const video = document.getElementById('video');
-
-    const myPeer = new Peer(undefined, {
-        host:'/',
-        port: 3001
-    })
-
-    peer.on('open', id => {
-      console.log('Conectado con ID de PeerJS:', id);
-    });
-
-    peer.on('call', call => {
-      call.answer();
-      call.on('stream', stream => {
-        video.srcObject = stream;
-      });
-    });
-
-
-    function controlGPIO(command) {
-      const instruction = JSON.stringify({ type: 'control', command });
-      ws.send(instruction);
-    }
-
-  </script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script
+      src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"
+    ></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="./script.js"></script>
+    <title>Control de GPIO y Video</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      video {
+        width: 320px;
+        height: 240px;
+        background: #000;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Control de GPIO y Video</h1>
+    <div>
+      <video id="video" controls autoplay></video>
+    </div>
+    <div class="control-panel">
+      <button onclick="controlGPIO('open-door')">Abrir Puerta</button>
+      <button onclick="controlGPIO('activate-siren')">Activar Sirena</button>
+      <button onclick="controlGPIO('turn-on-light')">Encender Luz</button>
+    </div>
+  </body>
 </html>
