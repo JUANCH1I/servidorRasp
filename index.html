@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <title>Control de GPIO y Video</title>
   <style>
     body {
@@ -28,18 +29,30 @@
   </div>
 
   <script>
-    const ws = new WebSocket('wss://aa40dcbc-d5d9-4a7a-81de-c68024f3f90b-00-27jro4ko262it.picard.replit.dev/control'); // Reemplaza <your-replit-url> con la URL de tu Replit
+        const video = document.getElementById('video');
 
-    ws.onopen = () => {
-      console.log('Conectado al servidor de control WebSocket');
-    };
+    const myPeer = new Peer(undefined, {
+        host:'/',
+        port: 3001
+    })
+
+    peer.on('open', id => {
+      console.log('Conectado con ID de PeerJS:', id);
+    });
+
+    peer.on('call', call => {
+      call.answer();
+      call.on('stream', stream => {
+        video.srcObject = stream;
+      });
+    });
+
 
     function controlGPIO(command) {
       const instruction = JSON.stringify({ type: 'control', command });
       ws.send(instruction);
     }
 
-    document.getElementById('video').src = 'https://aa40dcbc-d5d9-4a7a-81de-c68024f3f90b-00-27jro4ko262it.picard.replit.dev/live/stream/index.m3u8'; // Reemplaza <your-replit-url> con la URL de tu Replit
   </script>
 </body>
 </html>
