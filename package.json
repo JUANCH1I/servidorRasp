@@ -14,6 +14,7 @@
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "node-media-server": "^2.7.0",
+    "peer": "^1.0.2",
     "simple-peer": "^9.11.1",
     "socket.io": "^4.7.5",
     "wrtc": "^0.4.7",
